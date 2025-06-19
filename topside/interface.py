@@ -129,27 +129,27 @@ class CameraCaptureApp:
         
         # Frame for both camera displays side by side
         self.cameras_frame = ttk.Frame(self.main_frame)
-        self.cameras_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        # Left camera frame
-        self.left_cam_frame = ttk.LabelFrame(self.cameras_frame, text="Feed 1")
-        self.left_cam_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
+        self.cameras_frame.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)  # Remove padding
+
+        # Left camera frame (remove LabelFrame border and padding)
+        self.left_cam_frame = ttk.Frame(self.cameras_frame)
+        self.left_cam_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=0, pady=0)
+
         self.cam_label1 = ttk.Label(self.left_cam_frame)
-        self.cam_label1.pack(padx=5, pady=5)
-        
-        self.status_label1 = ttk.Label(self.left_cam_frame, text="Waiting for RTP stream...")
-        self.status_label1.pack(padx=5, pady=2)
-        
-        # Right camera frame
-        self.right_cam_frame = ttk.LabelFrame(self.cameras_frame, text="Feed 2")
-        self.right_cam_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
+        self.cam_label1.pack(padx=0, pady=0)
+
+        self.status_label1 = ttk.Label(self.left_cam_frame, text="")
+        self.status_label1.pack(padx=0, pady=0)
+
+        # Right camera frame (remove LabelFrame border and padding)
+        self.right_cam_frame = ttk.Frame(self.cameras_frame)
+        self.right_cam_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=0, pady=0)
+
         self.cam_label2 = ttk.Label(self.right_cam_frame)
-        self.cam_label2.pack(padx=5, pady=5)
-        
-        self.status_label2 = ttk.Label(self.right_cam_frame, text="Waiting for RTP stream...")
-        self.status_label2.pack(padx=5, pady=2)
+        self.cam_label2.pack(padx=0, pady=0)
+
+        self.status_label2 = ttk.Label(self.right_cam_frame, text="")
+        self.status_label2.pack(padx=0, pady=0)
         
         # Control panel
         self.control_frame = ttk.Frame(root)
@@ -392,28 +392,39 @@ class CameraCaptureApp:
         else:
             rtp_source = self.rtp_source2
             status_label = self.status_label2
-            
+
         # Check if we have a valid frame
         frame = rtp_source.get_frame()
         if frame is None:
             messagebox.showerror("Error", f"No video stream available on Feed {feed_number}")
             return
-            
+
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         session_dir = os.path.join(self.output_dir, f"feed{feed_number}_retinex_{timestamp}")
         os.makedirs(session_dir, exist_ok=True)
-        
+
         self.root.update()
-        
-        for i in range(5):
+
+        captured = 0
+        attempts = 0
+        max_attempts = 20  # Try up to 20 times to get 5 unique frames
+
+        last_frame_hash = None
+
+        while captured < 5 and attempts < max_attempts:
             frame = rtp_source.get_frame()
             if frame is not None:
-                processed_frame = self.process_frame(frame, apply_retinex=True)
-                filename = os.path.join(session_dir, f"frame_{i+1}.jpg")
-                cv2.imwrite(filename, processed_frame)
-                time.sleep(0.3)  # Small delay between captures
-        
+                frame_hash = hash(frame.tobytes())
+                if frame_hash != last_frame_hash:
+                    processed_frame = self.process_frame(frame, apply_retinex=True)
+                    filename = os.path.join(session_dir, f"frame_{captured+1}.jpg")
+                    cv2.imwrite(filename, processed_frame)
+                    last_frame_hash = frame_hash
+                    captured += 1
+            attempts += 1
 
+        if captured < 5:
+            messagebox.showwarning("Warning", f"Only {captured} unique frames captured for Feed {feed_number}.")
     
     def update_frames(self):
         """Update both camera feed displays"""
