@@ -331,8 +331,7 @@ class CameraCaptureApp:
         return frame
     
     def capture_no_retinex_frames(self, feed_number):
-        """Capture 5 frames without Retinex processing from specified feed"""
-        # Determine which feed to capture from
+        """Capture 1 frame without Retinex processing from specified feed"""
         if feed_number == 1:
             rtp_source = self.rtp_source1
             status_label = self.status_label1
@@ -340,52 +339,18 @@ class CameraCaptureApp:
             rtp_source = self.rtp_source2
             status_label = self.status_label2
 
-        # Check if we have a valid frame
         frame = rtp_source.get_frame()
         if frame is None:
             messagebox.showerror("Error", f"No video stream available on Feed {feed_number}")
             return
 
         timestamp = time.strftime("%Y%m%d_%H%M%S")
-        session_dir = os.path.join(self.output_dir, f"feed{feed_number}_no_retinex_{timestamp}")
-        os.makedirs(session_dir, exist_ok=True)
-
+        filename = os.path.join(self.output_dir, f"feed{feed_number}_no_retinex_{timestamp}.jpg")
+        cv2.imwrite(filename, frame)
         self.root.update()
 
-        captured = 0
-        attempts = 0
-        max_attempts = 20
-
-        last_frame_hash = None
-
-        while captured < 5 and attempts < max_attempts:
-            frame = rtp_source.get_frame()
-            if frame is not None:
-                # Check if the frame is different from the last captured frame
-                frame_hash = hash(frame.tobytes())
-                if feed_number == 1:
-                    if last_frame_hash == frame_hash:
-                        attempts += 1
-                        continue
-                    self.last_frame_hash1 = frame_hash
-                else:
-                    if last_frame_hash == frame_hash:
-                        attempts += 1
-                        continue
-                    self.last_frame_hash2 = frame_hash
-                
-                # Save the frame without Retinex processing
-                filename = os.path.join(session_dir, f"frame_{captured + 1}.jpg")
-                cv2.imwrite(filename, frame)
-                captured += 1
-                attempts = 0
-       
-       # for i in range(5):
-       #     frame = rtp_source.get_frame()
-    
     def capture_retinex_frames(self, feed_number):
-        """Capture 5 frames with Retinex processing from specified feed"""
-        # Determine which feed to capture from
+        """Capture 1 frame with Retinex processing from specified feed"""
         if feed_number == 1:
             rtp_source = self.rtp_source1
             status_label = self.status_label1
@@ -393,38 +358,16 @@ class CameraCaptureApp:
             rtp_source = self.rtp_source2
             status_label = self.status_label2
 
-        # Check if we have a valid frame
         frame = rtp_source.get_frame()
         if frame is None:
             messagebox.showerror("Error", f"No video stream available on Feed {feed_number}")
             return
 
+        processed_frame = self.process_frame(frame, apply_retinex=True)
         timestamp = time.strftime("%Y%m%d_%H%M%S")
-        session_dir = os.path.join(self.output_dir, f"feed{feed_number}_retinex_{timestamp}")
-        os.makedirs(session_dir, exist_ok=True)
-
+        filename = os.path.join(self.output_dir, f"feed{feed_number}_retinex_{timestamp}.jpg")
+        cv2.imwrite(filename, processed_frame)
         self.root.update()
-
-        captured = 0
-        attempts = 0
-        max_attempts = 20  # Try up to 20 times to get 5 unique frames
-
-        last_frame_hash = None
-
-        while captured < 5 and attempts < max_attempts:
-            frame = rtp_source.get_frame()
-            if frame is not None:
-                frame_hash = hash(frame.tobytes())
-                if frame_hash != last_frame_hash:
-                    processed_frame = self.process_frame(frame, apply_retinex=True)
-                    filename = os.path.join(session_dir, f"frame_{captured+1}.jpg")
-                    cv2.imwrite(filename, processed_frame)
-                    last_frame_hash = frame_hash
-                    captured += 1
-            attempts += 1
-
-        if captured < 5:
-            messagebox.showwarning("Warning", f"Only {captured} unique frames captured for Feed {feed_number}.")
     
     def update_frames(self):
         """Update both camera feed displays"""
