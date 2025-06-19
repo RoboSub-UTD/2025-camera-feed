@@ -68,7 +68,7 @@ class GstreamerRTPSource:
             f'udpsrc port={self.port} caps=application/x-rtp,encoding-name=H264,payload=96 ! '
             'rtph264depay ! avdec_h264 ! videoconvert ! '
             'videoflip method=clockwise ! '
-            'video/x-raw,format=BGR ! appsink name=sink emit-signals=true max-buffers=1 drop=true'
+            'video/x-raw,format=BGR, width=1280, height=720 ! appsink name=sink emit-signals=true max-buffers=1 drop=true'
         )
         
         self.pipeline = Gst.parse_launch(pipeline_str)
@@ -174,6 +174,24 @@ class CameraCaptureApp:
             command=lambda: self.capture_retinex_frames(2)
         )
         self.btn_capture2.pack(side=tk.LEFT, padx=5)
+
+        # Capture button for Feed 1 (no Retinex)
+        self.btn_capture1_no_retinex = ttk.Button(
+            self.capture_frame, 
+            text="Capture Feed 1 (No Retinex)", 
+            command=lambda: self.capture_no_retinex_frames(1)
+        )
+        self.btn_capture1_no_retinex.pack(side=tk.LEFT, padx=5)
+
+        # Capture button for Feed 2 (no Retinex)
+        self.btn_capture2_no_retinex = ttk.Button(
+            self.capture_frame, 
+            text="Capture Feed 2 (No Retinex)", 
+            command=lambda: self.capture_no_retinex_frames(2)
+        )
+        self.btn_capture2_no_retinex.pack(side=tk.LEFT, padx=5)
+
+
         
         # Connection frame
         self.connection_frame = ttk.Frame(self.control_frame)
@@ -203,6 +221,9 @@ class CameraCaptureApp:
         self.port_var2 = tk.StringVar(value="5001")
         self.port_entry2 = ttk.Entry(self.port_frame2, textvariable=self.port_var2, width=6)
         self.port_entry2.pack(side=tk.LEFT, padx=5)
+
+        self.last_frame_hash1 = None
+        self.last_frame_hash2 = None
         
         self.btn_connect2 = ttk.Button(
             self.port_frame2,
@@ -309,6 +330,59 @@ class CameraCaptureApp:
                 # If Retinex fails, return the original frame
         return frame
     
+    def capture_frames_no_retinex(self, feed_number):
+        """Capture 5 frames without Retinex processing from specified feed"""
+        # Determine which feed to capture from
+        if feed_number == 1:
+            rtp_source = self.rtp_source1
+            status_label = self.status_label1
+        else:
+            rtp_source = self.rtp_source2
+            status_label = self.status_label2
+
+        # Check if we have a valid frame
+        frame = rtp_source.get_frame()
+        if frame is None:
+            messagebox.showerror("Error", f"No video stream available on Feed {feed_number}")
+            return
+
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        session_dir = os.path.join(self.output_dir, f"feed{feed_number}_no_retinex_{timestamp}")
+        os.makedirs(session_dir, exist_ok=True)
+
+        self.root.update()
+
+        captured = 0
+        attempts = 0
+        max_attempts = 20
+
+        last_frame_hash = None
+
+        while captured < 5 and attempts < max_attempts:
+            frame = rtp_source.get_frame()
+            if frame is not None:
+                # Check if the frame is different from the last captured frame
+                frame_hash = hash(frame.tobytes())
+                if feed_number == 1:
+                    if last_frame_hash == frame_hash:
+                        attempts += 1
+                        continue
+                    self.last_frame_hash1 = frame_hash
+                else:
+                    if last_frame_hash == frame_hash:
+                        attempts += 1
+                        continue
+                    self.last_frame_hash2 = frame_hash
+                
+                # Save the frame without Retinex processing
+                filename = os.path.join(session_dir, f"frame_{captured + 1}.jpg")
+                cv2.imwrite(filename, frame)
+                captured += 1
+                attempts = 0
+       
+       # for i in range(5):
+       #     frame = rtp_source.get_frame()
+    
     def capture_retinex_frames(self, feed_number):
         """Capture 5 frames with Retinex processing from specified feed"""
         # Determine which feed to capture from
@@ -329,7 +403,6 @@ class CameraCaptureApp:
         session_dir = os.path.join(self.output_dir, f"feed{feed_number}_retinex_{timestamp}")
         os.makedirs(session_dir, exist_ok=True)
         
-        status_label.config(text="Capturing frames with Retinex...")
         self.root.update()
         
         for i in range(5):
@@ -340,8 +413,7 @@ class CameraCaptureApp:
                 cv2.imwrite(filename, processed_frame)
                 time.sleep(0.3)  # Small delay between captures
         
-        status_label.config(text=f"Saved 5 Retinex frames to: {session_dir}")
-        messagebox.showinfo("Success", f"Saved 5 Retinex frames from Feed {feed_number} to:\n{session_dir}")
+
     
     def update_frames(self):
         """Update both camera feed displays"""
@@ -376,13 +448,25 @@ class CameraCaptureApp:
             # Apply Retinex if enabled in preview
             if apply_retinex:
                 frame = self.process_frame(frame, apply_retinex=True)
+
+
+                frame_hash = hash(frame.tobytes())
+                if feed_name == "Feed 1":
+                    if self.last_frame_hash1 == frame_hash:
+                        return # skip update if frame is the same
+                    self.last_frame_hash1 = frame_hash
+                else:
+                    if self.last_frame_hash2 == frame_hash:
+                        return
+                    self.last_frame_hash2 = frame_hash
+
             
             # Convert to RGB for display
             display_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
             # Resize if needed (smaller for dual display)
-            if display_frame.shape[1] > 400 or display_frame.shape[0] > 300:
-                display_frame = cv2.resize(display_frame, (400, 300))
+            if display_frame.shape[1] > 960 or display_frame.shape[0] > 540:
+                display_frame = cv2.resize(display_frame, (960, 540))
             
             # Convert to PhotoImage and update display
             img = ImageTk.PhotoImage(image=Image.fromarray(display_frame))
