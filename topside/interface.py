@@ -476,8 +476,9 @@ class CameraCaptureApp:
             display_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
             # Resize if needed (smaller for dual display)
-            if display_frame.shape[1] > 928 or display_frame.shape[0] > 522:
-                display_frame = cv2.resize(display_frame, (928, 522))
+            print(display_frame.shape[1], display_frame.shape[0])
+            if display_frame.shape[1] > 522 or display_frame.shape[0] > 928:
+                display_frame = cv2.resize(display_frame, (522, 928))
             
             # Convert to PhotoImage and update display
             img = ImageTk.PhotoImage(image=Image.fromarray(display_frame))
