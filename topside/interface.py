@@ -466,7 +466,7 @@ class CameraCaptureApp:
             
             # Resize if needed (smaller for dual display)
             if display_frame.shape[1] > 960 or display_frame.shape[0] > 540:
-                display_frame = cv2.resize(display_frame, (960, 540))
+                display_frame = cv2.resize(display_frame, (928, 522))
             
             # Convert to PhotoImage and update display
             img = ImageTk.PhotoImage(image=Image.fromarray(display_frame))
