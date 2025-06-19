@@ -512,7 +512,7 @@ class CameraCaptureApp:
 if __name__ == "__main__":
     # Create Tkinter window
     root = tk.Tk()
-    root.geometry("1920x1000")
+    root.geometry("1100x900")
     
     # Create app
     app = CameraCaptureApp(root)

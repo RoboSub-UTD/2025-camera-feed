@@ -22,7 +22,7 @@ def make_gst_process(w, h, port):
         "gst-launch-1.0", "fdsrc", "!",
         f"rawvideoparse", f"width={w}", f"height={h}", "format=rgb", "framerate=30/1", "!",
         "videoconvert", "!",
-        "x264enc", "tune=zerolatency", "speed-preset=ultrafast", "bitrate=10000", "key-int-max=30", "intra-refresh=true", "!",
+        "x264enc", "tune=zerolatency", "speed-preset=ultrafast", "bitrate=4000", "key-int-max=30", "intra-refresh=true", "!",
         "rtph264pay", "config-interval=1", "pt=96", "!",
         "udpsink", f"host={host_ip}", f"port={port}"
         ], stdin=subprocess.PIPE)
