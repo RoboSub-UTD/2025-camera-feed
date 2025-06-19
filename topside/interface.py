@@ -68,7 +68,7 @@ class GstreamerRTPSource:
             f'udpsrc port={self.port} caps=application/x-rtp,encoding-name=H264,payload=96 ! '
             'rtph264depay ! avdec_h264 ! videoconvert ! '
             'videoflip method=clockwise ! '
-            'video/x-raw,format=BGR, width=1280, height=720 ! appsink name=sink emit-signals=true max-buffers=1 drop=true'
+            'video/x-raw,format=BGR ! appsink name=sink emit-signals=true max-buffers=1 drop=true'
         )
         
         self.pipeline = Gst.parse_launch(pipeline_str)
@@ -330,7 +330,7 @@ class CameraCaptureApp:
                 # If Retinex fails, return the original frame
         return frame
     
-    def capture_frames_no_retinex(self, feed_number):
+    def capture_no_retinex_frames(self, feed_number):
         """Capture 5 frames without Retinex processing from specified feed"""
         # Determine which feed to capture from
         if feed_number == 1:
@@ -465,7 +465,7 @@ class CameraCaptureApp:
             display_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
             # Resize if needed (smaller for dual display)
-            if display_frame.shape[1] > 960 or display_frame.shape[0] > 540:
+            if display_frame.shape[1] > 928 or display_frame.shape[0] > 522:
                 display_frame = cv2.resize(display_frame, (928, 522))
             
             # Convert to PhotoImage and update display
@@ -500,7 +500,7 @@ class CameraCaptureApp:
 if __name__ == "__main__":
     # Create Tkinter window
     root = tk.Tk()
-    root.geometry("900x700")
+    root.geometry("1920x1000")
     
     # Create app
     app = CameraCaptureApp(root)
