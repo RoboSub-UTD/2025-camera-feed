@@ -68,7 +68,7 @@ class GstreamerRTPSource:
             f'udpsrc port={self.port} caps=application/x-rtp,encoding-name=H264,payload=96 ! '
             'rtph264depay ! avdec_h264 ! videoconvert ! '
             'videoflip method=clockwise ! '
-            'video/x-raw,format=BGR, width=1280, height=720 ! appsink name=sink emit-signals=true max-buffers=1 drop=true'
+            'video/x-raw,format=BGR ! appsink name=sink emit-signals=true max-buffers=1 drop=true'
         )
         
         self.pipeline = Gst.parse_launch(pipeline_str)
