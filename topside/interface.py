@@ -7,6 +7,7 @@ import os
 import time
 import threading
 import gi
+from pathlib import Path
 
 # Import GStreamer
 gi.require_version('Gst', '1.0')
@@ -123,6 +124,11 @@ class CameraCaptureApp:
         self.rtp_source1 = GstreamerRTPSource(port=5000)
         self.rtp_source2 = GstreamerRTPSource(port=5001)
         
+        # Create directory for saved frames
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        self.output_dir = Path("captured_frames") / f"output_{timestamp}"
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
         # Create main frame
         self.main_frame = ttk.Frame(root)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
@@ -191,8 +197,14 @@ class CameraCaptureApp:
         )
         self.btn_capture2_no_retinex.pack(side=tk.LEFT, padx=5)
 
+        # Open captured frame folder
+        self.btn_open_capture_folder = ttk.Button(
+            self.capture_frame,
+            text="Open Capture Folder",
+            command=lambda: os.system(f"nautilus {self.output_dir}")
+        )
+        self.btn_open_capture_folder.pack(side=tk.LEFT, padx=5)
 
-        
         # Connection frame
         self.connection_frame = ttk.Frame(self.control_frame)
         self.connection_frame.pack(side=tk.TOP, fill=tk.X, pady=5)
@@ -260,11 +272,7 @@ class CameraCaptureApp:
             command=self.close_app
         )
         self.btn_exit.pack(side=tk.RIGHT, padx=5)
-        
-        # Create directory for saved frames
-        self.output_dir = "captured_frames"
-        os.makedirs(self.output_dir, exist_ok=True)
-                
+
         # Start the RTP sources and update loop
         self.running = True
         self.connect_to_stream(1)  # Start Feed 1 with default port
@@ -419,7 +427,6 @@ class CameraCaptureApp:
             display_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
             # Resize if needed (smaller for dual display)
-            print(display_frame.shape[1], display_frame.shape[0])
             if display_frame.shape[1] > 522 or display_frame.shape[0] > 928:
                 display_frame = cv2.resize(display_frame, (522, 928))
             
@@ -438,7 +445,7 @@ class CameraCaptureApp:
                 setattr(self, attribute_name, True)
                 cam_label.config(image='')
                 status_label.config(text=f"Waiting for {feed_name} stream...")
-    
+
     def close_app(self):
         """Clean up resources and close the application"""
         self.running = False
